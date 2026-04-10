@@ -131,7 +131,7 @@
       "username": "udhaya111",
       "email": "admin@workconnect.com",
       "phone": "",
-      "password": "$2a$10$RwmLJ0D4ofhRE10VXdWqSu7Zcjh0Kj8oi3EPfEgoPQ1NvZlbiZxTa",
+      "password": "$2a$10$.ABPmT0V76mVqz1LtL0O4ed7rjLaF4ztSvrmqyrWvakibseEkk9K2",
       "role": "admin",
       "createdAt": "2025-08-05T10:19:59.538Z"
     },
@@ -1210,7 +1210,25 @@
       },
       "transactionId": "pay_SberYMr5oBKECh",
       "paidAt": "2026-04-10T04:28:47.070Z",
-      "paymentMethod": "razorpay"
+      "paymentMethod": "razorpay",
+      "messages": [
+        {
+          "id": "1775799703672",
+          "senderId": "1773636230891",
+          "senderName": "Arun",
+          "text": "dvv",
+          "role": "customer",
+          "timestamp": "2026-04-10T05:41:43.672Z"
+        },
+        {
+          "id": "1775799706691",
+          "senderId": "worker_sim",
+          "senderName": "Worker",
+          "text": "Please keep the gate open.",
+          "role": "worker",
+          "timestamp": "2026-04-10T05:41:46.690Z"
+        }
+      ]
     }
   ],
   "payments": [
