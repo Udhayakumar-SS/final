@@ -7,7 +7,6 @@
       "config": {
         "includeFiles": [
           "public/**",
-          "database.json",
           "models.js"
         ]
       }
@@ -15,19 +14,31 @@
   ],
   "routes": [
     {
+      "src": "/uploads/(.*)",
+      "dest": "/server.js"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "/server.js",
-      "headers": {
-        "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        "Access-Control-Allow-Origin": "*"
-      }
+      "dest": "/server.js"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/public/$1"
     },
     {
       "handle": "filesystem"
     },
     {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|zip))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/(.*\\.html)",
+      "dest": "/public/$1"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/server.js"
     }
   ]
 }

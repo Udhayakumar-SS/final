@@ -3,3 +3,7 @@ node_modules
 .env
 .env.local
 .env.production
+public/uploads/*
+!public/uploads/.gitkeep
+public/*.zip
+test_upload.png

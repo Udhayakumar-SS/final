@@ -17,14 +17,32 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const uploadToCloudinary = async (filePath) => {
+const uploadToCloudinary = async (filePathOrBuffer, mimetype) => {
     try {
         if (!process.env.CLOUDINARY_CLOUD_NAME) return null;
-        const result = await cloudinary.uploader.upload(filePath, {
+        if (Buffer.isBuffer(filePathOrBuffer)) {
+            // Upload from buffer (Vercel / memory storage)
+            return await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: 'workconnect_profiles', resource_type: 'auto' },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result.secure_url);
+                    }
+                );
+                const { Readable } = require('stream');
+                const readable = new Readable();
+                readable.push(filePathOrBuffer);
+                readable.push(null);
+                readable.pipe(uploadStream);
+            });
+        }
+        // Upload from file path (local dev)
+        const result = await cloudinary.uploader.upload(filePathOrBuffer, {
             folder: 'workconnect_profiles'
         });
         // Delete local file after upload
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (fs.existsSync(filePathOrBuffer)) fs.unlinkSync(filePathOrBuffer);
         return result.secure_url;
     } catch (error) {
         console.error('Cloudinary upload error:', error);
@@ -75,24 +93,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Multer setup for file uploads
 const multer = require('multer');
-const uploadDir = IS_VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+let upload;
 if (IS_VERCEL) {
-    app.use('/uploads', express.static(uploadDir));
-}
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname);
-        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + ext;
-        cb(null, uniqueName);
+    // Use memory storage on Vercel (serverless, no persistent disk)
+    upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+} else {
+    const uploadDir = path.join(__dirname, 'public', 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
     }
-});
-const upload = multer({ storage });
+    const storage = multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, uploadDir);
+        },
+        filename: function (req, file, cb) {
+            const ext = path.extname(file.originalname);
+            const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9) + ext;
+            cb(null, uniqueName);
+        }
+    });
+    upload = multer({ storage });
+}
 
 // In-memory OTP store (for demo)
 const otpStore = {};
@@ -438,10 +459,18 @@ app.post('/api/register', upload.single('profileImage'), async (req, res) => {
         } catch { }
 
         // Upload image to Cloudinary if configured
-        let profileImageUrl = req.file ? '/uploads/' + req.file.filename : undefined;
+        let profileImageUrl = undefined;
         if (req.file) {
-            const cloudUrl = await uploadToCloudinary(req.file.path);
-            if (cloudUrl) profileImageUrl = cloudUrl;
+            // On Vercel: memory storage gives buffer, locally disk storage gives path
+            const uploadSource = req.file.buffer || req.file.path;
+            if (uploadSource) {
+                const cloudUrl = await uploadToCloudinary(uploadSource, req.file.mimetype);
+                if (cloudUrl) {
+                    profileImageUrl = cloudUrl;
+                } else if (req.file.path) {
+                    profileImageUrl = '/uploads/' + req.file.filename;
+                }
+            }
         }
 
         // Create new user
@@ -1127,9 +1156,14 @@ app.post('/api/worker-portfolio/:id', upload.single('photo'), async (req, res) =
         const { id } = req.params;
         if (!req.file) return res.status(400).json({ message: 'No photo uploaded' });
 
-        let photoUrl = '/uploads/' + req.file.filename;
-        const cloudUrl = await uploadToCloudinary(req.file.path);
-        if (cloudUrl) photoUrl = cloudUrl;
+        let photoUrl = null;
+        const uploadSource1 = req.file.buffer || req.file.path;
+        if (uploadSource1) {
+            const cloudUrl = await uploadToCloudinary(uploadSource1, req.file.mimetype);
+            if (cloudUrl) photoUrl = cloudUrl;
+            else if (req.file.path) photoUrl = '/uploads/' + req.file.filename;
+        }
+        if (!photoUrl) return res.status(500).json({ message: 'Failed to upload photo. Please configure Cloudinary.' });
 
         if (MONGODB_URI) {
             const worker = await User.findById(id);
@@ -1242,9 +1276,12 @@ app.put('/api/worker/:id', upload.single('profileImage'), async (req, res) => {
 
         let newProfileImage = null;
         if (req.file) {
-            newProfileImage = '/uploads/' + req.file.filename;
-            const cloudUrl = await uploadToCloudinary(req.file.path);
-            if (cloudUrl) newProfileImage = cloudUrl;
+            const uploadSource2 = req.file.buffer || req.file.path;
+            if (uploadSource2) {
+                const cloudUrl = await uploadToCloudinary(uploadSource2, req.file.mimetype);
+                if (cloudUrl) newProfileImage = cloudUrl;
+                else if (req.file.path) newProfileImage = '/uploads/' + req.file.filename;
+            }
         }
 
         let addressObj = null;
@@ -1332,9 +1369,12 @@ app.put('/api/customer/:id', upload.single('profileImage'), async (req, res) => 
 
         let newProfileImage = null;
         if (req.file) {
-            newProfileImage = '/uploads/' + req.file.filename;
-            const cloudUrl = await uploadToCloudinary(req.file.path);
-            if (cloudUrl) newProfileImage = cloudUrl;
+            const uploadSource3 = req.file.buffer || req.file.path;
+            if (uploadSource3) {
+                const cloudUrl = await uploadToCloudinary(uploadSource3, req.file.mimetype);
+                if (cloudUrl) newProfileImage = cloudUrl;
+                else if (req.file.path) newProfileImage = '/uploads/' + req.file.filename;
+            }
         }
 
         let addressObj = address;
@@ -1687,10 +1727,14 @@ app.post('/api/orders/:orderId/pay', upload.single('screenshot'), async (req, re
         const { method, customerId } = req.body;
 
         const transactionId = 'TXN-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 10000).toString(16);
-        let screenshotUrl = req.file ? '/uploads/' + req.file.filename : null;
+        let screenshotUrl = null;
         if (req.file) {
-            const cloudUrl = await uploadToCloudinary(req.file.path);
-            if (cloudUrl) screenshotUrl = cloudUrl;
+            const uploadSource4 = req.file.buffer || req.file.path;
+            if (uploadSource4) {
+                const cloudUrl = await uploadToCloudinary(uploadSource4, req.file.mimetype);
+                if (cloudUrl) screenshotUrl = cloudUrl;
+                else if (req.file.path) screenshotUrl = '/uploads/' + req.file.filename;
+            }
         }
 
         if (MONGODB_URI) {
