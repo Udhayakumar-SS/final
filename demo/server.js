@@ -404,6 +404,7 @@ async function sendEmail({ to, subject, text, html }) {
         }
     } catch (error) {
         console.error('❌ Email error:', error);
+        throw error;
     }
 }
 
