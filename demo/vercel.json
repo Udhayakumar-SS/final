@@ -1,5 +1,22 @@
 {
   "version": 2,
+  "env": {
+    "SMTP_USER": "s.udhayakumar144@gmail.com",
+    "SMTP_PASS": "likd ypzg sevc sebe",
+    "SMTP_HOST": "smtp.gmail.com",
+    "SMTP_PORT": "465",
+    "SMTP_SECURE": "true",
+    "CLOUDINARY_CLOUD_NAME": "your_cloud_name",
+    "CLOUDINARY_API_KEY": "your_api_key",
+    "CLOUDINARY_API_SECRET": "your_api_secret",
+    "RAZORPAY_KEY_ID": "rzp_live_SRpAOq7ktGAnnf",
+    "RAZORPAY_KEY_SECRET": "LeMXkTpGyOQH0AXc3mPxgG3e",
+    "CASHFREE_APP_ID": "your_cashfree_app_id",
+    "CASHFREE_SECRET_KEY": "your_cashfree_secret_key",
+    "CASHFREE_ENV": "TEST",
+    "ADMIN_USERNAME": "udhaya111",
+    "ADMIN_PASSWORD": "Udhaya111@"
+  },
   "builds": [
     {
       "src": "server.js",
